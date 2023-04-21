@@ -303,6 +303,10 @@ object ViewMain: TViewMain
     TabOrder = 1
     object tabConexao: TTabSheet
       Caption = 'Conex'#227'o'
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object pnConexao: TPanel
         Left = 0
         Top = 0
