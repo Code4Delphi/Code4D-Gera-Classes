@@ -12,10 +12,12 @@ uses
 
 {$R *.res}
 
+
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
   Application.CreateForm(TDM, DM);
   Application.CreateForm(TViewMain, ViewMain);
   Application.Run;
+
 end.

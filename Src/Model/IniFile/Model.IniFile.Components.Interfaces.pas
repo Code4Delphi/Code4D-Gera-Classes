@@ -15,7 +15,7 @@ type
     function Write(AComponent: TRadioGroup): IModelIniFileComponents; overload;
     function Write(AComponent: TRadioGroup; AValue: Integer): IModelIniFileComponents; overload;
     function Write(AComponent: TEdit): IModelIniFileComponents; overload;
-    function Write(AComponent: TEdit; AValue: String): IModelIniFileComponents; overload;
+    function Write(AComponent: TEdit; AValue: string): IModelIniFileComponents; overload;
     function Write(AComponent: TComboBox): IModelIniFileComponents; overload;
     function Write(AComponent: TComboBox; AValue: Integer): IModelIniFileComponents; overload;
 
@@ -24,7 +24,7 @@ type
     function Read(var AComponent: TRadioGroup): IModelIniFileComponents; overload;
     function Read(var AComponent: TRadioGroup; AValueDefault: Integer): IModelIniFileComponents; overload;
     function Read(var AComponent: TEdit): IModelIniFileComponents; overload;
-    function Read(var AComponent: TEdit; AValueDefault: String): IModelIniFileComponents; overload;
+    function Read(var AComponent: TEdit; AValueDefault: string): IModelIniFileComponents; overload;
     function Read(var AComponent: TComboBox): IModelIniFileComponents; overload;
     function Read(var AComponent: TComboBox; AValueDefault: Integer): IModelIniFileComponents; overload;
   end;

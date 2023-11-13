@@ -75,7 +75,7 @@ implementation
 
 procedure TDM.DataModuleCreate(Sender: TObject);
 begin
-   FDConnection1.Connected := False;
+  FDConnection1.Connected := False;
 end;
 
 end.
