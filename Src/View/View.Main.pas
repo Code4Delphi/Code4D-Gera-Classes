@@ -99,6 +99,9 @@ type
     edtLocalizarNomeTabela: TEdit;
     Label10: TLabel;
     btnVerSenha: TSpeedButton;
+    btnPreencherComDadosSQLite: TButton;
+    btnPreencherComDadosPostgres: TButton;
+    ckGerarsaídadedadosinterface: TCheckBox;
     procedure btnConectarOnOFFClick(Sender: TObject);
     procedure btnListarTabelasDoBancoClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -124,6 +127,9 @@ type
     procedure edtLocalizarNomeTabelaKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure btnVerSenhaMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure btnVerSenhaMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure btnPreencherComDadosSQLiteClick(Sender: TObject);
+    procedure btnPreencherComDadosPostgresClick(Sender: TObject);
+    procedure rdGroupFormaAcessoEntitiesClick(Sender: TObject);
   private
     FStrGeral: TStrings;
     FStrMetodosPrivate: TStrings;
@@ -135,6 +141,7 @@ type
     FClasseNome: string;
     FUnitNome: string;
     FTabelaLB: string;
+    FInterfaceGerada : Boolean;
     FFormaAcesso: TFormaAcesso;
     FORM: TORM;
     procedure ConfSGBD;
@@ -157,6 +164,14 @@ type
     procedure ConfFormSimpleORM;
     procedure ProcessaGetSetImplementacao(AFieldNameLB, AFieldTipo: string);
     procedure FiltraTabela;
+    procedure GerarInterface(AtableName: string);
+    procedure GeraTopoInterface;
+    procedure ProcessarContratoInterface(AFieldNameLB: string; AFieldTipo: string);
+    procedure GerarImplementacaodaClasseInterface(AtableName: string);
+    procedure GeraTopoClasseInterface;
+    procedure ProcessaOrientacaoInterface(AFieldNameLB, AFieldTipo: string);
+    procedure GeraDestructor;
+    procedure InstanciaFactoryMethod;
   public
 
   end;
@@ -299,6 +314,24 @@ begin
   edtUsuario.Text := 'root';
   edtHost.Text := 'localhost';
   edtPorta.Text := '3306';
+  edtUsuario.Enabled := True;
+  edtSenha.Enabled := True;
+  edtPorta.Enabled := True;
+  Self.ConfSGBD;
+end;
+
+procedure TViewMain.btnPreencherComDadosPostgresClick(Sender: TObject);
+begin
+   if(dm.FDConnection1.Connected)then
+    btnConectarOnOFF.Click;
+  cBoxDriver.ItemIndex := 3;
+  edtUsuario.Text := 'postgres';
+  edtSenha.Text := 'postgres';
+  edtHost.Text := 'localhost';
+  edtUsuario.Enabled := True;
+  edtSenha.Enabled := True;
+  edtPorta.Enabled := True;
+  edtPorta.Text := '5432';
   Self.ConfSGBD;
 end;
 
@@ -310,25 +343,51 @@ begin
   edtUsuario.Text := 'sysdba';
   edtSenha.Text := 'masterkey';
   edtHost.Text := 'localhost';
+  edtUsuario.Enabled := True;
+  edtSenha.Enabled := True;
+  edtPorta.Enabled := True;
   edtPorta.Text := '';
+  Self.ConfSGBD;
+end;
+
+procedure TViewMain.btnPreencherComDadosSQLiteClick(Sender: TObject);
+begin
+  if(dm.FDConnection1.Connected)then
+    btnConectarOnOFF.Click;
+  cBoxDriver.ItemIndex := 2;
+  edtUsuario.Text := '';
+  edtPorta.Text := '';
+  edtSenha.Text := '';
+  edtUsuario.Enabled := False;
+  edtSenha.Enabled := False;
+  edtPorta.Enabled := False;
   Self.ConfSGBD;
 end;
 
 procedure TViewMain.btnConectarOnOFFClick(Sender: TObject);
 begin
-  if(not dm.FDConnection1.Connected)then
-  begin
-    Self.ConectarBanco;
-    dm.FDMemTableTabelas.Open;
-    tabGerador.Show;
-  end
-  else
-  begin
-    dm.FDMemTableTabelas.Close;
-    dm.FDConnection1.Connected := False;
-  end;
-  btnConectarOnOFF.Caption := IfThen(dm.FDConnection1.Connected, 'Desconectar', 'Conectar');
-  pnGerador.Enabled := dm.FDConnection1.Connected;
+   try
+      if(not dm.FDConnection1.Connected)then
+      begin
+        Self.ConectarBanco;
+        dm.FDMemTableTabelas.Open;
+        tabGerador.Show;
+      end
+      else
+      begin
+        dm.FDMemTableTabelas.Close;
+        dm.FDConnection1.Connected := False;
+      end;
+      btnConectarOnOFF.Caption := IfThen(dm.FDConnection1.Connected, 'Desconectar', 'Conectar');
+      pnGerador.Enabled := dm.FDConnection1.Connected;
+   Except  on ex:exception do
+      begin
+        if  AnsiContainsstr(ex.Message, 'password authentication failed') then
+        begin
+           showMessage('Erro de Autenticação para o usuário ' + edtUsuario.Text);
+        end;
+      end;
+   end;
 end;
 
 procedure TViewMain.ConectarBanco;
@@ -339,6 +398,8 @@ begin
     case(cBoxDriver.ItemIndex)of
       0: dm.FDConnection1.Params.DriverID := 'MySQL';
       1: dm.FDConnection1.Params.DriverID := 'FB';
+      2: dm.FDConnection1.Params.DriverID := 'SQLite';
+      3: dm.FDConnection1.Params.DriverID := 'PG';
     end;
     dm.FDConnection1.Params.Database := edtDatabase.Text;
     dm.FDConnection1.Params.UserName := edtUsuario.Text;
@@ -496,7 +557,7 @@ begin
   try
     LOpenDialog.Title := 'Selecione o arquivo desejado';
     LOpenDialog.DefaulText := '*.FDB';
-    LOpenDialog.Filter := 'Arquivos FDB (*.FDB)|*.FDB|Arquivos GDB (*.GDB)|*.GDB|Todos os Arquivos (*.*)|*.*';
+    LOpenDialog.Filter := 'Arquivos FDB (*.FDB)|*.FDB|Arquivos GDB (*.GDB)|*.GDB|Arquivos DB (*.DB)|*.DB|Todos os Arquivos (*.*)|*.*';
     LOpenDialog.InitialDir := ExtractFileDir(LOpenDialog.FileName);
     if(not LOpenDialog.Execute)then
       Exit;
@@ -533,6 +594,11 @@ begin
   end;
 end;
 
+procedure TViewMain.rdGroupFormaAcessoEntitiesClick(Sender: TObject);
+begin
+  ckGerarsaídadedadosinterface.Visible := rdGroupFormaAcessoEntities.ItemIndex = 4;
+end;
+
 procedure TViewMain.rdGroupORMClick(Sender: TObject);
 begin
   if(rdGroupORM.ItemIndex = 1)then
@@ -559,7 +625,10 @@ end;
 
 procedure TViewMain.ConfSGBD;
 begin
-  btnBuscarArquivoBanco.Enabled := cBoxDriver.ItemIndex = 1;
+ case cBoxDriver.ItemIndex of
+  1:  btnBuscarArquivoBanco.Enabled := True;
+  2:  btnBuscarArquivoBanco.Enabled := True;
+ end;
 end;
 
 procedure TViewMain.btnGerarClassEntitiesSelecionadosClick(Sender: TObject);
@@ -577,7 +646,12 @@ begin
     while(not dm.FDMemTableTabelas.Eof)do
     begin
       if(dm.FDMemTableTabelasmarcado.AsString = 'S')then
-        Self.GerarClassesTabela(dm.FDMemTableTabelasnome_tabela.AsString);
+      begin
+        if rdGroupFormaAcessoEntities.ItemIndex = 4 then
+          Self.GerarInterface(dm.FDMemTableTabelasnome_tabela.AsString)
+         else
+          Self.GerarClassesTabela(dm.FDMemTableTabelasnome_tabela.AsString);
+      end;
       dm.FDMemTableTabelas.Next;
     end;
   finally
@@ -588,6 +662,89 @@ begin
 
   if(ckGravarArquivosPasta.Checked)and(ckAbrirPastaAposGravar.Checked)then
     ShellExecute(Application.Handle, 'open', PChar(ExtractFilePath(FDirSalvar)), nil, nil, SW_SHOWNORMAL);
+end;
+
+procedure TViewMain.GerarInterface(AtableName: string);
+begin
+  FTabelaName := AtableName;
+  FStrGeral.Clear;
+  if(ckLimparMemoACadaUnit.Checked)then
+    mmLog.Lines.Clear;
+  dm.FDMetaInfoQueryFIelds.Close;
+  dm.FDMetaInfoQueryFIelds.ObjectName := AtableName;
+  dm.FDMetaInfoQueryFIelds.Open;
+
+  FTabelaLB := AtableName;
+  if(ckUpperCamelCaseInTables.Checked)then
+    FTabelaLB := TUtils.FormataNome(FTabelaLB);
+
+  FUnitNome := StringReplace(edtNomeEntities.Text, '<NomeTabela>', FTabelaLB, [rfReplaceAll, rfIgnoreCase]);
+  FClasseNome := TUtils.RemovePontos(FUnitNome);
+
+  Self.GeraTopoInterface;
+  Self.LacoEmFields;
+  FInterfaceGerada := True;
+  Self.GeraPublic;
+  FStrGeral.Add('implementation');
+  FStrGeral.Add('end.');
+  mmLog.Lines.Add(FStrGeral.Text.TrimRight);
+
+  if(ckGravarArquivosPasta.Checked)then
+    FStrGeral.SaveToFile(FDirSalvar + 'i' + FUnitNome + '_.pas');
+
+  Self.GerarImplementacaodaClasseInterface(AtableName);
+
+end;
+
+procedure TViewMain.GerarImplementacaodaClasseInterface(AtableName: string);
+begin
+  FTabelaName := AtableName;
+  FStrGeral.Clear;
+  if(ckLimparMemoACadaUnit.Checked) and not (rdGroupFormaAcessoEntities.ItemIndex = 4 ) then
+    mmLog.Lines.Clear;
+  dm.FDMetaInfoQueryFIelds.Close;
+  dm.FDMetaInfoQueryFIelds.ObjectName := AtableName;
+  dm.FDMetaInfoQueryFIelds.Open;
+
+  FTabelaLB := AtableName;
+  if(ckUpperCamelCaseInTables.Checked)then
+    FTabelaLB := TUtils.FormataNome(FTabelaLB);
+  FUnitNome := StringReplace(edtNomeEntities.Text, '<NomeTabela>', FTabelaLB, [rfReplaceAll, rfIgnoreCase]);
+  FClasseNome := 'T' + TUtils.RemovePontos(FUnitNome);
+
+  Self.GeraTopoClasseInterface;
+  Self.LacoEmFields;
+  Self.GeraPrivate;
+  FInterfaceGerada := False;
+  Self.GeraPublic;
+  FStrGeral.Add('implementation');
+  Self.InstanciaFactoryMethod;
+  Self.GeraConstructor;
+  Self.GeraDestructor;
+  Self.ProcessaFuncoesAcesso;
+  FStrGeral.Add('end.');
+  mmLog.Lines.Add(FStrGeral.Text.TrimRight);
+
+  if(ckGravarArquivosPasta.Checked)then
+    FStrGeral.SaveToFile(FDirSalvar + FUnitNome + '.pas');
+
+end;
+
+procedure TViewMain.GeraTopoClasseInterface;
+begin
+  if(ckAddCabecalho.Checked)then
+    FStrGeral.Add(TUtils.GerarCabecalhoArquivo);
+
+  FStrGeral.Add('unit ' + FUnitNome + ';');
+  FStrGeral.Add('');
+  FStrGeral.Add('interface');
+  FStrGeral.Add('');
+  FStrGeral.Add('Uses');
+  FStrGeral.Add('i'+ FUnitNome +'_;');
+  FStrGeral.Add('');
+  FStrGeral.Add('');
+  FStrGeral.Add('type');
+  FStrGeral.Add('  '+ FClasseNome +' = class ( TInterfacedObject, i' + FUnitNome + ' )');
 end;
 
 procedure TViewMain.GerarClassesTabela(AtableName: string);
@@ -643,7 +800,22 @@ begin
     TORM.SimpleORM:
     FStrGeral.Add('  [Tabela('+ QuotedStr(FTabelaName) +')]');
   end;
+
   FStrGeral.Add('  '+ FClasseNome +' = class');
+end;
+
+procedure TViewMain.GeraTopoInterface;
+begin
+  if(ckAddCabecalho.Checked)then
+    FStrGeral.Add(TUtils.GerarCabecalhoArquivo);
+
+  FStrGeral.Add('unit i' + FUnitNome + '_;');
+  FStrGeral.Add('');
+  FStrGeral.Add('interface');
+  FStrGeral.Add('');
+  FStrGeral.Add('type');
+  FStrGeral.Add(' i'+ FClasseNome +' = interface ' );
+  FstrGeral.Add('['''+GUIDToString(TGuid.NewGuid)+''']');
 end;
 
 procedure TViewMain.LacoEmFields;
@@ -674,12 +846,19 @@ begin
     //METODO ACESSO
     case(FFormaAcesso)of
       TFormaAcesso.PropertyDireto,
-        TFormaAcesso.PropertyGetSet:
-      Self.ProcessaProperty(LFieldName, LFieldNameLB, LFieldTipo);
+      TFormaAcesso.PropertyGetSet:
+        Self.ProcessaProperty(LFieldName, LFieldNameLB, LFieldTipo);
       TFormaAcesso.GetSet:
-      Self.ProcessaGetSet(LFieldNameLB, LFieldTipo);
+        Self.ProcessaGetSet(LFieldNameLB, LFieldTipo);
       TFormaAcesso.FluentInterface:
-      Self.ProcessaFluentInterface(LFieldNameLB, LFieldTipo);
+        Self.ProcessaFluentInterface(LFieldNameLB, LFieldTipo);
+      TFormaAcesso.OrientadoInterface:
+      begin
+         if not FInterfaceGerada then
+         Self.ProcessarContratoInterface( LFieldNameLB, LFieldTipo);
+        if FInterfaceGerada then
+          Self.ProcessaOrientacaoInterface(LFieldNameLB, LFieldTipo);
+      end;
     end;
     dm.FDMetaInfoQueryFIelds.Next;
   end;
@@ -752,6 +931,19 @@ begin
   FStrAcessoImpl.Add('');
 end;
 
+procedure TViewMain.ProcessarContratoInterface(AFieldNameLB: string; AFieldTipo: string);
+begin
+  if ckGerarsaídadedadosinterface.Checked then
+  begin
+    FStrAcessoDeclaracoes.Add('    function '+ AFieldNameLB + ':' + AFieldTipo + '; overload;');
+    FStrAcessoDeclaracoes.Add('    function '+ AFieldNameLB +'(Value: '+ AFieldTipo +'): i' + FUnitNome  +'; overload;');
+  end
+  else
+  begin
+    FStrAcessoDeclaracoes.Add('    function '+ AFieldNameLB +'(Value: '+ AFieldTipo +'): i' + FUnitNome  +';');
+  end;
+end;
+
 procedure TViewMain.ProcessaFluentInterface(AFieldNameLB: string; AFieldTipo: string);
 begin
   FStrAcessoDeclaracoes.Add('    function '+ AFieldNameLB +': '+ AFieldTipo +'; overload;');
@@ -770,6 +962,38 @@ begin
   FStrAcessoImpl.Add('');
 end;
 
+procedure TViewMain.ProcessaOrientacaoInterface(AFieldNameLB: string; AFieldTipo: string);
+begin
+  if ckGerarsaídadedadosinterface.Checked then
+  begin
+    FStrAcessoDeclaracoes.Add('    function '+ AFieldNameLB +': '+ AFieldTipo +'; overload;');
+    FStrAcessoDeclaracoes.Add('    function '+ AFieldNameLB +'(Value: '+ AFieldTipo +'): i' + FUnitNome +'; overload;');
+
+    FStrAcessoImpl.Add('function '+ FClasseNome + '.' + AFieldNameLB +': '+ AFieldTipo +';');
+    FStrAcessoImpl.Add('begin');
+    FStrAcessoImpl.Add('   Result := F'+ AFieldNameLB +';');
+    FStrAcessoImpl.Add('end;');
+    FStrAcessoImpl.Add('');
+    FStrAcessoImpl.Add('function '+ FClasseNome +'.'+ AFieldNameLB +'(Value: '+ AFieldTipo +'): i'+ FUnitNome +';');
+    FStrAcessoImpl.Add('begin');
+    FStrAcessoImpl.Add('   Result := Self;');
+    FStrAcessoImpl.Add('   F'+ AFieldNameLB +' := Value;');
+    FStrAcessoImpl.Add('end;');
+    FStrAcessoImpl.Add('');
+  end
+  else
+  begin
+    FStrAcessoDeclaracoes.Add('    function '+ AFieldNameLB +'(Value: '+ AFieldTipo +'): i' + FUnitNome +';');
+
+    FStrAcessoImpl.Add('function '+ FClasseNome +'.'+ AFieldNameLB +'(Value: '+ AFieldTipo +'): i'+ FUnitNome +';');
+    FStrAcessoImpl.Add('begin');
+    FStrAcessoImpl.Add('   Result := Self;');
+    FStrAcessoImpl.Add('   F'+ AFieldNameLB +' := Value;');
+    FStrAcessoImpl.Add('end;');
+    FStrAcessoImpl.Add('');
+  end;
+end;
+
 procedure TViewMain.GeraPrivate;
 begin
   FStrGeral.Add('  private');
@@ -780,10 +1004,35 @@ end;
 
 procedure TViewMain.GeraPublic;
 begin
-  FStrGeral.Add('  public');
-  FStrGeral.Add('    constructor Create;');
-  FStrGeral.Add(FStrAcessoDeclaracoes.Text.TrimRight);
-  FStrGeral.Add('  end;');
+  if rdGroupFormaAcessoEntities.ItemIndex = 4 then
+  begin
+    if not FInterfaceGerada then
+    begin
+      FStrGeral.Add('  public');
+      FStrGeral.Add('    constructor Create;');
+      FStrGeral.Add('    destructor destroy ; Override;');
+      FStrGeral.Add('    class function new: i' + FUnitNome + ';' );
+    end;
+
+    FStrGeral.Add(FStrAcessoDeclaracoes.Text.TrimRight);
+    FStrGeral.Add('  end;');
+    FStrGeral.Add('');
+  end
+  else
+  begin
+    FStrGeral.Add(FStrAcessoDeclaracoes.Text.TrimRight);
+    FStrGeral.Add('  end;');
+    FStrGeral.Add('');
+  end;
+end;
+
+procedure TViewMain.InstanciaFactoryMethod;
+begin
+  FStrGeral.Add('');
+  FStrGeral.Add('class function '+ FClasseNome + '.new: i' + FUnitNome + ';');
+  FStrGeral.Add('begin');
+  FStrGeral.Add('   Result := ' + FClasseNome + '.Create;');
+  FStrGeral.Add('end;');
   FStrGeral.Add('');
 end;
 
@@ -797,12 +1046,27 @@ begin
   FStrGeral.Add('');
 end;
 
+procedure TViewMain.GeraDestructor;
+begin
+  FStrGeral.Add('');
+  FStrGeral.Add('Destructor '+ FClasseNome + '.Destroy;');
+  FStrGeral.Add('begin');
+  FStrGeral.Add('   inherited;');
+  FStrGeral.Add('end;');
+  FStrGeral.Add('');
+end;
+
 procedure TViewMain.ProcessaFuncoesAcesso;
 begin
   case(FFormaAcesso)of
     TFormaAcesso.PropertyGetSet,
-      TFormaAcesso.GetSet,
-      TFormaAcesso.FluentInterface:
+    TFormaAcesso.GetSet,
+    TFormaAcesso.FluentInterface:
+    begin
+      FStrGeral.Add(FStrAcessoImpl.Text.TrimRight);
+      FStrGeral.Add('');
+    end;
+    TFormaAcesso.OrientadoInterface:
     begin
       FStrGeral.Add(FStrAcessoImpl.Text.TrimRight);
       FStrGeral.Add('');

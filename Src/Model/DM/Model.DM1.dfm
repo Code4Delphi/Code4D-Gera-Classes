@@ -1,5 +1,4 @@
 object DM: TDM
-  OldCreateOrder = False
   OnCreate = DataModuleCreate
   Height = 468
   Width = 843
@@ -74,8 +73,8 @@ object DM: TDM
   end
   object DS_FDMemTableTabelas: TDataSource
     DataSet = FDMemTableTabelas
-    Left = 328
-    Top = 80
+    Left = 464
+    Top = 216
   end
   object FDMetaInfoQueryFIelds: TFDMetaInfoQuery
     Connection = FDConnection1
@@ -140,5 +139,13 @@ object DM: TDM
   object FDPhysFBDriverLink1: TFDPhysFBDriverLink
     Left = 464
     Top = 16
+  end
+  object FDPhysSQLiteDriverLink1: TFDPhysSQLiteDriverLink
+    Left = 464
+    Top = 88
+  end
+  object FDPhysPgDriverLink1: TFDPhysPgDriverLink
+    Left = 464
+    Top = 152
   end
 end

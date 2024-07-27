@@ -6,7 +6,11 @@
 </p>
 Geração de classes de entidades. Com opções para o SimpleORM.
 
-
+Instrunção para Postgres SQL
+ 
+ - Pegue na pasta postgres, a lib que corresponde a versão instalada em sua máquina.
+ Copie e cole na pasta que o executável Code4DelphiGeraClasses está, renome deixando somente a pasta lib,
+ pois a aplicação buscará por essa pasta.
 
 ## 📞 Contacts
 

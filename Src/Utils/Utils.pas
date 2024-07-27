@@ -147,6 +147,7 @@ class function TUtils.GerarCabecalhoArquivo: string;
 begin
   Result := '{'+ StringOfChar('*', 78) + '}' + sLineBreak +
     '{'+ CompD('Code4D - Gerador de classes: ' + FormatDateTime('dd/mm/yyyy hh:nn:ss', Now), 78) +'}' + sLineBreak +
+    '{'+ CompD('Contribuição - Tiago Robson - Delphiando - @Tiagoadvir ' +  '', 78) +'}' + sLineBreak +
     '{'+ StringOfChar('*', 78) + '}' + sLineBreak;
 
   {Result := '//'+ StringOfChar('*', 78)                                                    + sLineBreak +
@@ -179,6 +180,9 @@ begin
   else if(ATypeName = 'TIMESTAMP')or(ATypeName = 'DATETIME')then
     Result := C_DATETIME
   else if(ATypeName = 'DOUBLE')or(ATypeName = 'FLOAT')or(ATypeName = 'DECIMAL')or(ATypeName = 'NUMERIC')then
+    Result := C_DOUBLE
+  else
+  if(ATypeName = 'DOUBLE PRECISION')or(ATypeName = 'FLOAT')or(ATypeName = 'DECIMAL')or(ATypeName = 'NUMERIC')then
     Result := C_DOUBLE
   else
   begin

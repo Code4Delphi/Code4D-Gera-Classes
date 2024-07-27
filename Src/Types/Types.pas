@@ -4,7 +4,7 @@ interface
 
 type
   {$SCOPEDENUMS ON}
-  TFormaAcesso = (PropertyDireto, PropertyGetSet, GetSet, FluentInterface);
+  TFormaAcesso = (PropertyDireto, PropertyGetSet, GetSet, FluentInterface, OrientadoInterface);
   TORM = (None, SimpleORM);
   {$SCOPEDENUMS OFF}
 
